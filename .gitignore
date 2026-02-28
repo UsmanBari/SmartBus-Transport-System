@@ -1,0 +1,18 @@
+# Compiled class files
+out/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.class
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime logs
+run_stdout.txt
+run_stderr.txt
+*.log
