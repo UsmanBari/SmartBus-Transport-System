@@ -1,5 +1,5 @@
 import config.DatabaseConnection;
-import ui.screens.AdminDashboard;
+import ui.screens.LoginScreen;
 
 import javax.swing.*;
 import java.awt.*;
@@ -7,7 +7,7 @@ import java.sql.SQLException;
 
 /**
  * Application entry point.
- * Verifies DB connectivity, then launches the AdminDashboard on the EDT.
+ * Verifies DB connectivity, then launches the LoginScreen on the EDT.
  */
 public class Main {
 
@@ -32,14 +32,13 @@ public class Main {
             System.err.println("       The dashboard will still launch; DB errors will be shown inline.");
         }
 
-        System.out.println("Premium Admin Dashboard Running");
+        System.out.println("Sprint 2 \u2013 Approval Based System Running");
 
         // ── Launch on EDT ────────────────────────────────────────────────────
         SwingUtilities.invokeLater(() -> {
-            // Improve rendering pipeline
             Toolkit.getDefaultToolkit().setDynamicLayout(true);
             System.setProperty("sun.awt.noerasebackground", "true");
-            new AdminDashboard();
+            new LoginScreen();
         });
     }
 }
