@@ -1,6 +1,8 @@
 package ui.screens;
 
+import dao.FeeChallanDAO;
 import dao.StudentDAO;
+import model.FeeChallan;
 import model.Student;
 import ui.components.*;
 
@@ -9,6 +11,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 
 /**
  * AdminStudentLookupPanel – Full-width search panel.
@@ -16,7 +19,8 @@ import java.sql.SQLException;
  */
 public class AdminStudentLookupPanel extends JPanel {
 
-    private final StudentDAO studentDao = new StudentDAO();
+    private final StudentDAO    studentDao = new StudentDAO();
+    private final FeeChallanDAO challanDao = new FeeChallanDAO();
     private ModernTextField  tfRoll;
     private JPanel           resultPanel;
     private JFrame           parentFrame;
@@ -175,6 +179,39 @@ public class AdminStudentLookupPanel extends JPanel {
                     inner.add(infoBlock("Note", "Awaiting admin review", AppColors.WARNING), rc);
                 }
 
+                // Fee Status from challan
+                row++;
+                rc.gridy = row; rc.gridx = 0; rc.gridwidth = 2;
+                rc.insets = new Insets(12, 0, 12, 0);
+                try {
+                    FeeChallan challan = challanDao.getChallanByStudentId(student.getStudentId());
+                    if (challan == null) {
+                        inner.add(infoBlock("Fee Status", "No Challan Issued", AppColors.TEXT_MUTED), rc);
+                    } else {
+                        switch (challan.getStatus()) {
+                            case "UNPAID":
+                                inner.add(buildFeeBadgeBlock("UNPAID", new Color(0xD97706), null), rc);
+                                break;
+                            case "PROOF_SUBMITTED":
+                                String proofDate = challan.getProofSubmittedAt() != null ?
+                                    new SimpleDateFormat("dd MMM yyyy").format(challan.getProofSubmittedAt()) : "";
+                                inner.add(buildFeeBadgeBlock("PROOF SUBMITTED", new Color(0x1E40AF),
+                                    "Submitted on: " + proofDate), rc);
+                                break;
+                            case "PAID":
+                                String paidDate = challan.getPaidAt() != null ?
+                                    new SimpleDateFormat("dd MMM yyyy").format(challan.getPaidAt()) : "";
+                                inner.add(buildFeeBadgeBlock("PAID", new Color(0x059669),
+                                    "Confirmed on: " + paidDate), rc);
+                                break;
+                            default:
+                                inner.add(infoBlock("Fee Status", challan.getStatus(), AppColors.TEXT_MUTED), rc);
+                        }
+                    }
+                } catch (SQLException ignored) {
+                    inner.add(infoBlock("Fee Status", "Unable to load", AppColors.TEXT_MUTED), rc);
+                }
+
                 // Spacer
                 row++;
                 rc.gridy = row; rc.gridx = 0; rc.gridwidth = 2;
@@ -216,6 +253,52 @@ public class AdminStudentLookupPanel extends JPanel {
         lblVal.setForeground(valueColor);
         lblVal.setAlignmentX(Component.LEFT_ALIGNMENT);
         block.add(lblVal);
+
+        return block;
+    }
+
+    private JPanel buildFeeBadgeBlock(String statusText, Color badgeColor, String subText) {
+        JPanel block = new JPanel();
+        block.setOpaque(false);
+        block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
+
+        JLabel lblKey = new JLabel("Fee Status");
+        lblKey.setFont(new Font(AppFonts.LABEL.getFamily(), Font.PLAIN, 13));
+        lblKey.setForeground(AppColors.TEXT_MUTED);
+        lblKey.setAlignmentX(Component.LEFT_ALIGNMENT);
+        block.add(lblKey);
+        block.add(Box.createRigidArea(new Dimension(0, 6)));
+
+        // Badge
+        final Color fColor = badgeColor;
+        JPanel badge = new JPanel() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(fColor);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.dispose();
+            }
+        };
+        badge.setOpaque(false);
+        badge.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        badge.setPreferredSize(new Dimension(180, 28));
+        badge.setMaximumSize(new Dimension(180, 28));
+        badge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel badgeLbl = new JLabel(statusText);
+        badgeLbl.setFont(new Font(AppFonts.BUTTON.getFamily(), Font.BOLD, 12));
+        badgeLbl.setForeground(Color.WHITE);
+        badge.add(badgeLbl);
+        block.add(badge);
+
+        if (subText != null && !subText.isEmpty()) {
+            block.add(Box.createRigidArea(new Dimension(0, 4)));
+            JLabel subLbl = new JLabel(subText);
+            subLbl.setFont(new Font(AppFonts.BODY.getFamily(), Font.PLAIN, 12));
+            subLbl.setForeground(badgeColor);
+            subLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            block.add(subLbl);
+        }
 
         return block;
     }

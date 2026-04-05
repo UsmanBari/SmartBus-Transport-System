@@ -12,11 +12,13 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * AdminViewRoutesPanel – Shows all routes with their students in expandable cards.
- * For each route: name, stops, distance, capacity, and a table of assigned students.
+ * For each route: name, stops, distance, fee, capacity, and a table of assigned students.
  */
 public class AdminViewRoutesPanel extends JPanel {
 
@@ -105,10 +107,29 @@ public class AdminViewRoutesPanel extends JPanel {
         routeHeader.setOpaque(false);
         routeHeader.setBorder(new EmptyBorder(0, 0, 12, 0));
 
+        // Left side: name + edit fee button
+        JPanel nameRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        nameRow.setOpaque(false);
+
         JLabel nameLabel = new JLabel(route.getRouteName());
         nameLabel.setFont(new Font(AppFonts.SECTION.getFamily(), Font.BOLD, 18));
         nameLabel.setForeground(AppColors.TEXT_PRIMARY);
-        routeHeader.add(nameLabel, BorderLayout.WEST);
+        nameRow.add(nameLabel);
+
+        // Edit Fee button
+        JButton editFeeBtn = new JButton("\u270E Edit Fee");
+        editFeeBtn.setFont(new Font(AppFonts.BODY.getFamily(), Font.BOLD, 11));
+        editFeeBtn.setForeground(AppColors.ACCENT);
+        editFeeBtn.setBackground(AppColors.ACCENT_LIGHT);
+        editFeeBtn.setOpaque(true);
+        editFeeBtn.setBorderPainted(false);
+        editFeeBtn.setFocusPainted(false);
+        editFeeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        editFeeBtn.setPreferredSize(new Dimension(100, 28));
+        editFeeBtn.addActionListener(e -> showEditFeeDialog(route));
+        nameRow.add(editFeeBtn);
+
+        routeHeader.add(nameRow, BorderLayout.WEST);
 
         // Capacity badges
         int bus1 = 0, bus2 = 0;
@@ -121,6 +142,7 @@ public class AdminViewRoutesPanel extends JPanel {
         badges.setOpaque(false);
         badges.add(statBadge("\uD83D\uDCCD " + route.getTotalStops() + " Stops"));
         badges.add(statBadge("\uD83D\uDCCF " + String.format("%.1f", route.getDistance()) + " km"));
+        badges.add(feeBadge(route.getFeeAmount()));
         badges.add(statBadge("Bus1: " + bus1 + "/" + BUS_CAPACITY));
         badges.add(statBadge("Bus2: " + bus2 + "/" + BUS_CAPACITY));
         routeHeader.add(badges, BorderLayout.EAST);
@@ -165,6 +187,99 @@ public class AdminViewRoutesPanel extends JPanel {
         card.add(inner);
         return card;
     }
+
+    // ── Edit Fee Dialog ─────────────────────────────────────────────────────
+
+    private void showEditFeeDialog(Route route) {
+        JDialog dlg = new JDialog(parentFrame, "Edit Fee — " + route.getRouteName(), true);
+        dlg.setUndecorated(false);
+        dlg.setSize(400, 220);
+        dlg.setLocationRelativeTo(parentFrame);
+        dlg.getContentPane().setBackground(Color.WHITE);
+        dlg.setLayout(new GridBagLayout());
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.insets = new Insets(12, 24, 4, 24);
+        c.gridx = 0; c.gridy = 0; c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1; c.gridwidth = 2;
+
+        JLabel heading = new JLabel("Update Semester Fee");
+        heading.setFont(new Font(AppFonts.SECTION.getFamily(), Font.BOLD, 18));
+        heading.setForeground(AppColors.TEXT_PRIMARY);
+        dlg.add(heading, c);
+
+        c.gridy = 1; c.insets = new Insets(2, 24, 12, 24);
+        JLabel sub = new JLabel("Current fee: PKR " + formatCurrency(route.getFeeAmount()));
+        sub.setFont(AppFonts.BODY);
+        sub.setForeground(AppColors.TEXT_SECONDARY);
+        dlg.add(sub, c);
+
+        c.gridy = 2; c.insets = new Insets(0, 24, 4, 24);
+        JLabel lbl = new JLabel("New Fee Amount (PKR):");
+        lbl.setFont(AppFonts.LABEL);
+        lbl.setForeground(AppColors.TEXT_SECONDARY);
+        dlg.add(lbl, c);
+
+        c.gridy = 3; c.insets = new Insets(0, 24, 12, 24);
+        ModernTextField tfNewFee = new ModernTextField("e.g. 15000");
+        tfNewFee.setText(String.valueOf(route.getFeeAmount()));
+        dlg.add(tfNewFee, c);
+
+        // Buttons
+        c.gridy = 4; c.gridwidth = 1; c.weightx = 0.5;
+        c.insets = new Insets(4, 24, 16, 6);
+        c.fill = GridBagConstraints.HORIZONTAL;
+        NeonButton btnUpdate = new NeonButton("  Update Fee  ");
+        btnUpdate.setPreferredSize(new Dimension(140, 38));
+        dlg.add(btnUpdate, c);
+
+        c.gridx = 1; c.insets = new Insets(4, 6, 16, 24);
+        JButton btnCancel = new JButton("Cancel");
+        btnCancel.setFont(AppFonts.BUTTON);
+        btnCancel.setForeground(AppColors.TEXT_SECONDARY);
+        btnCancel.setBackground(AppColors.BG_SECONDARY);
+        btnCancel.setOpaque(true);
+        btnCancel.setBorderPainted(false);
+        btnCancel.setFocusPainted(false);
+        btnCancel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnCancel.setPreferredSize(new Dimension(140, 38));
+        btnCancel.addActionListener(e -> dlg.dispose());
+        dlg.add(btnCancel, c);
+
+        btnUpdate.addActionListener(e -> {
+            String feeStr = tfNewFee.getText().trim();
+            double newFee;
+            try { newFee = Double.parseDouble(feeStr); }
+            catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dlg, "Please enter a valid positive fee amount.",
+                    "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (newFee <= 0) {
+                JOptionPane.showMessageDialog(dlg, "Please enter a valid positive fee amount.",
+                    "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            try {
+                boolean ok = routeDao.updateRouteFee(route.getId(), newFee);
+                if (ok) {
+                    dlg.dispose();
+                    loadData();
+                    showToast("Fee updated successfully.", ToastNotification.Type.SUCCESS);
+                } else {
+                    JOptionPane.showMessageDialog(dlg, "Failed to update fee.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(dlg, "Database error: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        dlg.setVisible(true);
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private void styleSmallTable(JTable table) {
         table.setOpaque(false);
@@ -242,11 +357,42 @@ public class AdminViewRoutesPanel extends JPanel {
         return lbl;
     }
 
+    private JLabel feeBadge(double feeAmount) {
+        String feeText = "\uD83D\uDCB0 PKR " + formatCurrency(feeAmount);
+        JLabel lbl = new JLabel(feeText) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(0xD1FAE5));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
+        lbl.setOpaque(false);
+        lbl.setFont(new Font(AppFonts.BODY.getFamily(), Font.BOLD, 11));
+        lbl.setForeground(new Color(0x059669));
+        lbl.setBorder(new EmptyBorder(3, 8, 3, 8));
+        return lbl;
+    }
+
+    private String formatCurrency(double amount) {
+        NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
+        nf.setMinimumFractionDigits(2);
+        nf.setMaximumFractionDigits(2);
+        return nf.format(amount);
+    }
+
     private JLabel emptyLabel(String text) {
         JLabel lbl = new JLabel(text, SwingConstants.CENTER);
         lbl.setFont(AppFonts.BODY);
         lbl.setForeground(AppColors.TEXT_MUTED);
         lbl.setBorder(new EmptyBorder(40, 0, 0, 0));
         return lbl;
+    }
+
+    private void showToast(String msg, ToastNotification.Type type) {
+        if (parentFrame == null) return;
+        new ToastNotification(parentFrame, msg, type).show(0);
     }
 }

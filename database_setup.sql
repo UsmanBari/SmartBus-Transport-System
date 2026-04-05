@@ -51,3 +51,29 @@ INSERT INTO routes (route_name, total_stops, distance) VALUES
 ('Campus to City Center', 8, 15.5),
 ('Campus to Airport', 12, 32.0),
 ('Campus to Railway Station', 6, 10.2);
+
+-- =====================================================
+-- Sprint 3: Fee Management Module
+-- Run these AFTER the initial setup above
+-- =====================================================
+
+-- ── Add fee amount to routes ─────────────────────────
+ALTER TABLE routes ADD COLUMN fee_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00;
+
+-- ── Fee challans table ───────────────────────────────
+CREATE TABLE IF NOT EXISTS fee_challans (
+    challan_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    student_roll VARCHAR(50) NOT NULL,
+    student_name VARCHAR(120) NOT NULL,
+    route_id INT NOT NULL,
+    route_name VARCHAR(150) NOT NULL,
+    amount_due DECIMAL(10,2) NOT NULL,
+    status ENUM('UNPAID', 'PROOF_SUBMITTED', 'PAID') DEFAULT 'UNPAID',
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    receipt_image_path VARCHAR(500) NULL,
+    proof_submitted_at TIMESTAMP NULL,
+    paid_at TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (route_id) REFERENCES routes(id)
+);

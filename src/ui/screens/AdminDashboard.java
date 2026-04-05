@@ -25,6 +25,7 @@ public class AdminDashboard extends JFrame {
     private SidebarItem itemViewRoutes;
     private SidebarItem itemStudentRequests;
     private SidebarItem itemStudentLookup;
+    private SidebarItem itemFeeManagement;
     private SidebarItem itemLogout;
 
     private AddRoutePanel            addRoutePanel;
@@ -32,6 +33,7 @@ public class AdminDashboard extends JFrame {
     private AdminViewRoutesPanel     viewRoutesPanel;
     private AdminApprovalPanel       approvalPanel;
     private AdminStudentLookupPanel  lookupPanel;
+    private FeeManagementPanel       feeManagementPanel;
     private AnimatedPanelSwitcher    switcher;
 
     public AdminDashboard() {
@@ -145,6 +147,17 @@ public class AdminDashboard extends JFrame {
         sidebar.add(Box.createRigidArea(new Dimension(0, 16)));
         sidebar.add(buildDivider());
 
+        // ── FINANCE ───────────────────────────────────────────────────────────
+        sidebar.add(buildSectionLabel("FINANCE"));
+
+        itemFeeManagement = new SidebarItem("\uD83D\uDCB0", "Fee Management");
+        itemFeeManagement.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        sidebar.add(Box.createRigidArea(new Dimension(0, 4)));
+        sidebar.add(itemFeeManagement);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 16)));
+        sidebar.add(buildDivider());
+
         // ── SESSION ─────────────────────────────────────────────────────────
         sidebar.add(Box.createVerticalGlue());
         sidebar.add(buildSectionLabel("SESSION"));
@@ -170,6 +183,10 @@ public class AdminDashboard extends JFrame {
             activateItem(itemStudentRequests, "studentRequests");
         });
         itemStudentLookup.setOnClick(() -> activateItem(itemStudentLookup, "studentLookup"));
+        itemFeeManagement.setOnClick(() -> {
+            feeManagementPanel.loadData();
+            activateItem(itemFeeManagement, "feeManagement");
+        });
         itemLogout.setOnClick(this::handleLogout);
 
         return sidebar;
@@ -343,11 +360,12 @@ public class AdminDashboard extends JFrame {
         content.setOpaque(false);
         content.setBorder(new EmptyBorder(40, 48, 40, 48));
 
-        addRoutePanel     = new AddRoutePanel(this);
-        assignDriverPanel = new AssignDriverPanel(this);
-        viewRoutesPanel   = new AdminViewRoutesPanel(this);
-        approvalPanel     = new AdminApprovalPanel(this);
-        lookupPanel       = new AdminStudentLookupPanel(this);
+        addRoutePanel      = new AddRoutePanel(this);
+        assignDriverPanel  = new AssignDriverPanel(this);
+        viewRoutesPanel    = new AdminViewRoutesPanel(this);
+        approvalPanel      = new AdminApprovalPanel(this);
+        lookupPanel        = new AdminStudentLookupPanel(this);
+        feeManagementPanel = new FeeManagementPanel(this);
 
         switcher = new AnimatedPanelSwitcher();
         switcher.addPanel("addRoute",        addRoutePanel);
@@ -355,6 +373,7 @@ public class AdminDashboard extends JFrame {
         switcher.addPanel("viewRoutes",      viewRoutesPanel);
         switcher.addPanel("studentRequests", approvalPanel);
         switcher.addPanel("studentLookup",   lookupPanel);
+        switcher.addPanel("feeManagement",   feeManagementPanel);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx   = 0; gbc.gridy  = 0;
@@ -373,6 +392,7 @@ public class AdminDashboard extends JFrame {
         itemViewRoutes.setActive(false);
         itemStudentRequests.setActive(false);
         itemStudentLookup.setActive(false);
+        itemFeeManagement.setActive(false);
         itemLogout.setActive(false);
         target.setActive(true);
         switcher.switchTo(panelKey);

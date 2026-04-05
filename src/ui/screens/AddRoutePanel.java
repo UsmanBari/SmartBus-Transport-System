@@ -19,6 +19,7 @@ public class AddRoutePanel extends JPanel {
     private final ModernTextField tfName     = new ModernTextField("e.g. Campus to City Center");
     private final ModernTextField tfStops    = new ModernTextField("e.g. 12");
     private final ModernTextField tfDistance = new ModernTextField("e.g. 18.5");
+    private final ModernTextField tfFee      = new ModernTextField("e.g. 15000");
     private final NeonButton      btnSave    = new NeonButton("  Save Route");
 
     private JFrame parentFrame;
@@ -41,7 +42,7 @@ public class AddRoutePanel extends JPanel {
 
     private JPanel buildCard() {
         GlassCard card = new GlassCard();
-        card.setPreferredSize(new Dimension(520, 420));
+        card.setPreferredSize(new Dimension(520, 500));
         card.setLayout(new GridBagLayout());
 
         GridBagConstraints c = new GridBagConstraints();
@@ -87,11 +88,17 @@ public class AddRoutePanel extends JPanel {
         // Distance
         ic.gridy  = 6; ic.insets = new Insets(0, 0, 4, 0);
         inner.add(fieldLabel("Distance (km)"), ic);
-        ic.gridy  = 7; ic.insets = new Insets(0, 0, 30, 0);
+        ic.gridy  = 7; ic.insets = new Insets(0, 0, 18, 0);
         inner.add(tfDistance, ic);
 
+        // Semester Fee
+        ic.gridy  = 8; ic.insets = new Insets(0, 0, 4, 0);
+        inner.add(fieldLabel("Semester Fee (PKR)"), ic);
+        ic.gridy  = 9; ic.insets = new Insets(0, 0, 30, 0);
+        inner.add(tfFee, ic);
+
         // Save button
-        ic.gridy  = 8; ic.insets = new Insets(0, 0, 0, 0);
+        ic.gridy  = 10; ic.insets = new Insets(0, 0, 0, 0);
         ic.fill   = GridBagConstraints.NONE;
         ic.anchor = GridBagConstraints.WEST;
         inner.add(btnSave, ic);
@@ -130,25 +137,31 @@ public class AddRoutePanel extends JPanel {
         String name     = tfName.getText().trim();
         String stopsStr = tfStops.getText().trim();
         String distStr  = tfDistance.getText().trim();
+        String feeStr   = tfFee.getText().trim();
 
-        if (name.isEmpty() || stopsStr.isEmpty() || distStr.isEmpty()) {
+        if (name.isEmpty() || stopsStr.isEmpty() || distStr.isEmpty() || feeStr.isEmpty()) {
             showError("All fields are required.");
             return;
         }
 
         int    stops;
         double dist;
+        double fee;
         try { stops = Integer.parseInt(stopsStr); }
         catch (NumberFormatException ex) { showError("Total Stops must be a whole number."); return; }
 
         try { dist = Double.parseDouble(distStr); }
         catch (NumberFormatException ex) { showError("Distance must be a valid number."); return; }
 
+        try { fee = Double.parseDouble(feeStr); }
+        catch (NumberFormatException ex) { showError("Please enter a valid fee amount (must be greater than 0)."); return; }
+
         if (stops <= 0)  { showError("Total Stops must be greater than 0."); return; }
         if (dist  <= 0)  { showError("Distance must be greater than 0."); return; }
+        if (fee   <= 0)  { showError("Please enter a valid fee amount (must be greater than 0)."); return; }
 
         try {
-            boolean ok = dao.addRoute(new Route(name, stops, dist));
+            boolean ok = dao.addRoute(new Route(name, stops, dist, fee));
             if (ok) {
                 clearFields();
                 showToast("Route \"" + name + "\" saved successfully.", ToastNotification.Type.SUCCESS);
@@ -164,6 +177,7 @@ public class AddRoutePanel extends JPanel {
         tfName.setText("");
         tfStops.setText("");
         tfDistance.setText("");
+        tfFee.setText("");
     }
 
     private void showToast(String msg, ToastNotification.Type type) {

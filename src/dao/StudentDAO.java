@@ -257,6 +257,21 @@ public class StudentDAO {
         }
     }
 
+    /**
+     * Count using an existing connection (for transaction support).
+     */
+    public int getBusCount(Connection conn, int routeId, int busNumber) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM students "
+                   + "WHERE assigned_route_id = ? AND bus_number = ? AND status = 'APPROVED'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, routeId);
+            ps.setInt(2, busNumber);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  APPROVE & ASSIGN
     // ═══════════════════════════════════════════════════════════════════════
@@ -269,6 +284,20 @@ public class StudentDAO {
                    + "status = 'APPROVED' WHERE student_id = ?";
         try (Connection conn = DatabaseConnection.getInstance();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, routeId);
+            ps.setInt(2, busNumber);
+            ps.setInt(3, studentId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Approve and assign using an existing connection (for transaction support).
+     */
+    public boolean assignStudentToBus(Connection conn, int studentId, int routeId, int busNumber) throws SQLException {
+        String sql = "UPDATE students SET assigned_route_id = ?, bus_number = ?, "
+                   + "status = 'APPROVED' WHERE student_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, routeId);
             ps.setInt(2, busNumber);
             ps.setInt(3, studentId);

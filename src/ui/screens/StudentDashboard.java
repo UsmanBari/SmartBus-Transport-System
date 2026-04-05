@@ -16,13 +16,15 @@ public class StudentDashboard extends JFrame {
 
     private SidebarItem itemRegister;
     private SidebarItem itemMyStatus;
+    private SidebarItem itemFeeChallan;
     private SidebarItem itemViewRoutes;
     private SidebarItem itemLogout;
 
-    private StudentRegistrationPanel registrationPanel;
-    private StudentStatusPanel       statusPanel;
-    private ViewRoutesPanel          viewRoutesPanel;
-    private AnimatedPanelSwitcher    switcher;
+    private StudentRegistrationPanel  registrationPanel;
+    private StudentStatusPanel         statusPanel;
+    private StudentFeeChallanPanel     feeChallanPanel;
+    private ViewRoutesPanel            viewRoutesPanel;
+    private AnimatedPanelSwitcher      switcher;
 
     private final String studentRoll;
 
@@ -97,11 +99,13 @@ public class StudentDashboard extends JFrame {
         // Nav items
         itemRegister   = new SidebarItem("\uD83D\uDCDD", "Register");
         itemMyStatus   = new SidebarItem("\uD83D\uDCCA", "My Status");
+        itemFeeChallan = new SidebarItem("\uD83D\uDCB3", "My Fee Challan");
         itemViewRoutes = new SidebarItem("\uD83D\uDDFA", "View Routes");
         itemLogout     = new SidebarItem("\uD83D\uDEAA", "Logout");
 
         itemRegister.setAlignmentX(Component.LEFT_ALIGNMENT);
         itemMyStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
+        itemFeeChallan.setAlignmentX(Component.LEFT_ALIGNMENT);
         itemViewRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
         itemLogout.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -109,6 +113,8 @@ public class StudentDashboard extends JFrame {
         sidebar.add(itemRegister);
         sidebar.add(Box.createRigidArea(new Dimension(0, 2)));
         sidebar.add(itemMyStatus);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 2)));
+        sidebar.add(itemFeeChallan);
         sidebar.add(Box.createRigidArea(new Dimension(0, 2)));
         sidebar.add(itemViewRoutes);
         sidebar.add(Box.createRigidArea(new Dimension(0, 16)));
@@ -126,6 +132,10 @@ public class StudentDashboard extends JFrame {
         itemMyStatus.setOnClick(() -> {
             statusPanel.refreshData();
             activateItem(itemMyStatus, "myStatus");
+        });
+        itemFeeChallan.setOnClick(() -> {
+            feeChallanPanel.refreshData();
+            activateItem(itemFeeChallan, "feeChallan");
         });
         itemViewRoutes.setOnClick(() -> {
             viewRoutesPanel.refreshData();
@@ -273,11 +283,13 @@ public class StudentDashboard extends JFrame {
 
         registrationPanel = new StudentRegistrationPanel(this);
         statusPanel       = new StudentStatusPanel(this, studentRoll);
+        feeChallanPanel   = new StudentFeeChallanPanel(this, studentRoll);
         viewRoutesPanel   = new ViewRoutesPanel(this);
 
         switcher = new AnimatedPanelSwitcher();
         switcher.addPanel("register",   registrationPanel);
         switcher.addPanel("myStatus",   statusPanel);
+        switcher.addPanel("feeChallan", feeChallanPanel);
         switcher.addPanel("viewRoutes", viewRoutesPanel);
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -294,6 +306,7 @@ public class StudentDashboard extends JFrame {
     private void activateItem(SidebarItem target, String panelKey) {
         itemRegister.setActive(false);
         itemMyStatus.setActive(false);
+        itemFeeChallan.setActive(false);
         itemViewRoutes.setActive(false);
         itemLogout.setActive(false);
         target.setActive(true);

@@ -1,6 +1,11 @@
 package ui.screens;
 
+import config.DatabaseConnection;
+import dao.FeeChallanDAO;
+import dao.RouteDAO;
 import dao.StudentDAO;
+import model.FeeChallan;
+import model.Route;
 import model.Student;
 import ui.components.*;
 
@@ -9,6 +14,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -18,7 +24,9 @@ import java.util.List;
  */
 public class AdminApprovalPanel extends JPanel {
 
-    private final StudentDAO   studentDao = new StudentDAO();
+    private final StudentDAO    studentDao  = new StudentDAO();
+    private final FeeChallanDAO  challanDao  = new FeeChallanDAO();
+    private final RouteDAO       routeDao    = new RouteDAO();
     private DefaultTableModel  tableModel;
     private JTable             table;
     private JFrame             parentFrame;
@@ -221,35 +229,77 @@ public class AdminApprovalPanel extends JPanel {
         Student student = pendingStudents.get(tableRow);
         int routeId = student.getSelectedRouteId();
 
+        Connection conn = null;
         try {
+            conn = DatabaseConnection.getInstance();
+            conn.setAutoCommit(false);
+
             // Check Bus 1
-            int bus1Count = studentDao.getBusCount(routeId, 1);
+            int bus1Count = studentDao.getBusCount(conn, routeId, 1);
+            int assignedBus = -1;
             if (bus1Count < BUS_CAPACITY) {
-                // Assign to Bus 1
-                boolean ok = studentDao.assignStudentToBus(student.getStudentId(), routeId, 1);
-                if (ok) {
-                    showToast(student.getStudentName() + " assigned to Bus 1.", ToastNotification.Type.SUCCESS);
-                    loadData();
-                    return;
+                assignedBus = 1;
+            } else {
+                // Check Bus 2
+                int bus2Count = studentDao.getBusCount(conn, routeId, 2);
+                if (bus2Count < BUS_CAPACITY) {
+                    assignedBus = 2;
                 }
             }
 
-            // Check Bus 2
-            int bus2Count = studentDao.getBusCount(routeId, 2);
-            if (bus2Count < BUS_CAPACITY) {
-                boolean ok = studentDao.assignStudentToBus(student.getStudentId(), routeId, 2);
-                if (ok) {
-                    showToast(student.getStudentName() + " assigned to Bus 2.", ToastNotification.Type.SUCCESS);
-                    loadData();
-                    return;
-                }
+            if (assignedBus == -1) {
+                conn.rollback();
+                showToast("Both buses are FULL for this route! Request cannot be approved.", ToastNotification.Type.ERROR);
+                return;
             }
 
-            // Both full
-            showToast("Both buses are FULL for this route! Request cannot be approved.", ToastNotification.Type.ERROR);
+            // Assign student to bus
+            boolean assigned = studentDao.assignStudentToBus(conn, student.getStudentId(), routeId, assignedBus);
+            if (!assigned) {
+                conn.rollback();
+                showToast("Failed to assign student. Please try again.", ToastNotification.Type.ERROR);
+                return;
+            }
+
+            // Fetch route info for challan
+            Route route = routeDao.getRouteById(conn, routeId);
+            if (route == null) {
+                conn.rollback();
+                showToast("Approval failed. Could not find route information.", ToastNotification.Type.ERROR);
+                return;
+            }
+
+            // Create fee challan
+            FeeChallan challan = new FeeChallan(
+                student.getStudentId(),
+                student.getStudentRoll(),
+                student.getStudentName(),
+                route.getId(),
+                route.getRouteName(),
+                route.getFeeAmount()
+            );
+
+            boolean challanCreated = challanDao.createChallan(conn, challan);
+            if (!challanCreated) {
+                conn.rollback();
+                showToast("Approval failed. Could not generate fee challan. Please try again.", ToastNotification.Type.ERROR);
+                return;
+            }
+
+            // All good — commit
+            conn.commit();
+            showToast("Student approved and fee challan generated successfully.", ToastNotification.Type.SUCCESS);
+            loadData();
 
         } catch (SQLException ex) {
-            showToast("Database error: " + ex.getMessage(), ToastNotification.Type.ERROR);
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignored) {}
+            }
+            showToast("Approval failed. Could not generate fee challan. Please try again.", ToastNotification.Type.ERROR);
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+            }
         }
     }
 
