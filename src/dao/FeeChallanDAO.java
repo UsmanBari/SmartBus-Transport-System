@@ -22,6 +22,10 @@ public class FeeChallanDAO {
      * Uses the provided connection (for transaction support in approval flow).
      */
     public boolean createChallan(Connection conn, FeeChallan challan) throws SQLException {
+        if (conn == null || challan == null) {
+            return false;
+        }
+
         String sql = "INSERT INTO fee_challans (student_id, student_roll, student_name, "
                    + "route_id, route_name, amount_due, status, issued_at) "
                    + "VALUES (?, ?, ?, ?, ?, ?, 'UNPAID', CURRENT_TIMESTAMP)";
@@ -41,6 +45,9 @@ public class FeeChallanDAO {
                 }
             }
             return rows > 0;
+        } catch (SQLException ex) {
+            System.err.println("Error creating challan: " + ex.getMessage());
+            return false;
         }
     }
 
@@ -60,8 +67,8 @@ public class FeeChallanDAO {
      */
     public FeeChallan getChallanByStudentId(int studentId) throws SQLException {
         String sql = "SELECT * FROM fee_challans WHERE student_id = ? ORDER BY issued_at DESC LIMIT 1";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, studentId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -78,8 +85,8 @@ public class FeeChallanDAO {
     public List<FeeChallan> getAllChallans() throws SQLException {
         List<FeeChallan> list = new ArrayList<>();
         String sql = "SELECT * FROM fee_challans ORDER BY issued_at DESC";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql);
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(mapRow(rs));
@@ -94,8 +101,8 @@ public class FeeChallanDAO {
     public List<FeeChallan> getChallansByStatus(String status) throws SQLException {
         List<FeeChallan> list = new ArrayList<>();
         String sql = "SELECT * FROM fee_challans WHERE status = ? ORDER BY issued_at DESC";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, status);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -118,8 +125,8 @@ public class FeeChallanDAO {
         String sql = "UPDATE fee_challans SET status = 'PROOF_SUBMITTED', "
                    + "receipt_image_path = ?, proof_submitted_at = CURRENT_TIMESTAMP "
                    + "WHERE challan_id = ? AND status = 'UNPAID'";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, receiptImagePath);
             ps.setInt(2, challanId);
             return ps.executeUpdate() > 0;
@@ -133,8 +140,8 @@ public class FeeChallanDAO {
         String sql = "UPDATE fee_challans SET status = 'PAID', "
                    + "paid_at = CURRENT_TIMESTAMP "
                    + "WHERE challan_id = ? AND status = 'PROOF_SUBMITTED'";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, challanId);
             return ps.executeUpdate() > 0;
         }
@@ -149,8 +156,8 @@ public class FeeChallanDAO {
      */
     public double getTotalCollected() throws SQLException {
         String sql = "SELECT COALESCE(SUM(amount_due), 0) FROM fee_challans WHERE status = 'PAID'";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql);
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             return rs.next() ? rs.getDouble(1) : 0.0;
         }
@@ -161,8 +168,8 @@ public class FeeChallanDAO {
      */
     public double getTotalPending() throws SQLException {
         String sql = "SELECT COALESCE(SUM(amount_due), 0) FROM fee_challans WHERE status != 'PAID'";
-        try (Connection conn = DatabaseConnection.getInstance();
-             PreparedStatement ps = conn.prepareStatement(sql);
+        Connection conn = DatabaseConnection.getInstance();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             return rs.next() ? rs.getDouble(1) : 0.0;
         }
